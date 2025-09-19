@@ -48,7 +48,7 @@ pub enum Data {
 /// let input = r#"{"key": "value"}"#;
 /// let cursor = std::io::Cursor::new(input);
 /// let buf_reader = std::io::BufReader::new(cursor);
-/// let mut lexer = json_study::lexer::Lexer::new(buf_reader);
+/// let mut lexer = parser::lexer::Lexer::new(buf_reader);
 /// let mut tokens = vec![];    
 ///
 /// loop {
@@ -56,10 +56,10 @@ pub enum Data {
 ///     assert!(result.is_ok());
 ///     let token = result.unwrap();
 ///     match token {
-///         json_study::lexer::Token {
+///         parser::lexer::Token {
 ///             line: _,
 ///             pos: _,
-///             data: json_study::lexer::Data::EOF
+///             data: parser::lexer::Data::EOF
 ///         } => break,
 ///         _ => tokens.push(token),
 ///     }
@@ -68,30 +68,30 @@ pub enum Data {
 /// assert_eq!(
 ///     tokens,
 ///     vec![
-///         json_study::lexer::Token {
+///         parser::lexer::Token {
 ///             line: 1..1,
 ///             pos: 1..1,
-///             data: json_study::lexer::Data::LeftBrace,
+///             data: parser::lexer::Data::LeftBrace,
 ///         },
-///         json_study::lexer::Token {
+///         parser::lexer::Token {
 ///             line: 1..1,
 ///             pos: 2..6,
-///             data: json_study::lexer::Data::String("key".into()),
+///             data: parser::lexer::Data::String("key".into()),
 ///         },
-///         json_study::lexer::Token {
+///         parser::lexer::Token {
 ///             line: 1..1,
 ///             pos: 7..7,
-///             data: json_study::lexer::Data::Colon,
+///             data: parser::lexer::Data::Colon,
 ///         },
-///         json_study::lexer::Token {
+///         parser::lexer::Token {
 ///             line: 1..1,
 ///             pos: 9..15,
-///             data: json_study::lexer::Data::String("value".into()),
+///             data: parser::lexer::Data::String("value".into()),
 ///         },
-///         json_study::lexer::Token {
+///         parser::lexer::Token {
 ///             line: 1..1,
 ///             pos: 16..16,
-///             data: json_study::lexer::Data::RightBrace,
+///             data: parser::lexer::Data::RightBrace,
 ///         },
 ///     ]
 /// )

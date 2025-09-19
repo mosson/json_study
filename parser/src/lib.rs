@@ -3,20 +3,9 @@ pub mod char_reader;
 /// char_reader::CharReader から　JSONトークンを生成する
 pub mod lexer;
 
-use crate::lexer::{Data, Lexer, Token};
+use node::Node;
 
-/// JSONデータを表現する
-#[derive(std::fmt::Debug, Clone, PartialEq)]
-pub enum Node {
-    String(String),
-    Number(f64),
-    True,
-    False,
-    Null,
-    Array(Vec<Node>),
-    Object(std::collections::BTreeMap<String, Node>),
-    EOF,
-}
+use crate::lexer::{Data, Lexer, Token};
 
 /// 解析時のエラーを表現する
 #[derive(thiserror::Error, std::fmt::Debug)]
@@ -41,17 +30,17 @@ impl From<lexer::error::Error> for Error {
 /// let input = r#"{"key": "Hello, 世界"}"#;
 /// let cursor = std::io::Cursor::new(input);
 /// let buf_reader = std::io::BufReader::new(cursor);
-/// let mut parser = json_study::Parser::new(buf_reader);
+/// let mut parser = parser::Parser::new(buf_reader);
 /// let result = parser.parse();
 /// assert!(result.is_ok());
 /// let result = result.unwrap();
 /// assert_eq!(
 ///     result,
-///     json_study::Node::Object(
+///     node::Node::Object(
 ///         std::collections::BTreeMap::from([
 ///             (
 ///                 "key".to_string(),
-///                 json_study::Node::String("Hello, 世界".to_string())
+///                 node::Node::String("Hello, 世界".to_string())
 ///             )
 ///         ])
 ///     )
