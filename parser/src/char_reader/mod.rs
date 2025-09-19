@@ -12,7 +12,7 @@ use crate::char_reader::error::Error;
 /// let source = r#"こんにちわ、World🫠"#;
 /// let cursor = std::io::Cursor::new(source);
 /// let handle = std::io::BufReader::new(cursor);
-/// let mut char_reader = crate::json_study::char_reader::CharReader::new(handle);
+/// let mut char_reader = crate::parser::char_reader::CharReader::new(handle);
 ///
 /// for (i, want) in source.chars().enumerate() {
 ///     let got = char_reader.read();

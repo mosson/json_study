@@ -1,11 +1,15 @@
-[package]
-name = "json_study"
+[workspace]
+members = ["node", "parser", "macro_deserialize"]
+resolver = "3"
+
+[workspace.package]
 version = "0.1.0"
+publish = false
 edition = "2024"
+license = "MIT"
 
-[dependencies]
+[workspace.dependencies]
+node = { path = "./node" }
+parser = { path = "./parser" }
+macro_deserialize = { path = "./macro_deserialize" }
 thiserror = "2.0.16"
-
-[dev-dependencies]
-pretty_assertions = "1.4.1"
-rstest = "0.26.1"

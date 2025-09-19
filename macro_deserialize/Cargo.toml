@@ -1,0 +1,14 @@
+[package]
+name = "macro_deserialize"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1.0"
+syn = "2.0"
+node.workspace = true

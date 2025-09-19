@@ -1,3 +1,5 @@
+use parser::Parser;
+
 fn main() {
     let input = r#"
         {
@@ -28,7 +30,7 @@ fn main() {
 
     let cursor = std::io::Cursor::new(input);
     let buf_reader = std::io::BufReader::new(cursor);
-    let mut parser = json_study::Parser::new(buf_reader);
+    let mut parser = Parser::new(buf_reader);
 
     println!("{:#?}", parser.parse());
     println!("{:#?}", parser.parse());

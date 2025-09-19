@@ -1,0 +1,18 @@
+/// JSONデータを表現する
+#[derive(std::fmt::Debug, Clone, PartialEq)]
+pub enum Node {
+    String(String),
+    Number(f64),
+    True,
+    False,
+    Null,
+    Array(Vec<Node>),
+    Object(std::collections::BTreeMap<String, Node>),
+    EOF,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("")]
+    ConversionError,
+}
