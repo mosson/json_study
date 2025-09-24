@@ -1,3 +1,7 @@
+pub trait FromNode: Sized {
+    fn from_node(node: &Node) -> Result<Self, Error>;
+}
+
 /// JSONデータを表現する
 #[derive(std::fmt::Debug, Clone, PartialEq)]
 pub enum Node {

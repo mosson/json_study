@@ -429,21 +429,36 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
                     });
                 }
                 _ => {
-                    let message = format!(
-                        "サポートされていないデータ型が指定されました（{}: {}）",
-                        field_name,
-                        get_data_type(&ty)
-                    );
-
-                    fragments.push(quote! { #field_name: compile_error!(#message) })
+                    match option_inner_type(&ty) {
+                        Some(ty) => {
+                            fragments.push(quote! {
+                                #field_name: match map.get(#field_str) {
+                                    Some(node::Node::Null) => None,
+                                    // 完全修飾構文
+                                    Some(node) => Some(<#ty as node::FromNode>::from_node(node)?),
+                                    _ => None,
+                                }
+                            })
+                        },
+                        None => {
+                            fragments.push(quote! {
+                                #field_name: match map.get(#field_str) {
+                                    Some(node) => {
+                                        <#ty as node::FromNode>::from_node(&node)?
+                                    },
+                                    _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
+                                }
+                            })
+                        }
+                    }
                 }
             }
         }
     }
 
     let expanded = quote! {
-        impl #name {
-            pub fn from_value(value: &node::Node) -> Result<Self, node::Error> {
+        impl node::FromNode for #name {
+            fn from_node(value: &node::Node) -> Result<Self, node::Error> {
                 if let node::Node::Object(map) = value {
                     Ok(Self {
                         #(#fragments),*
@@ -456,17 +471,6 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(expanded)
-}
-
-fn get_data_type(ty: &Type) -> String {
-    match ty {
-        Type::Path(type_path) => type_path
-            .path
-            .get_ident()
-            .map(|i| i.to_string())
-            .unwrap_or("".to_string()),
-        _ => "".to_string(),
-    }
 }
 
 fn is_string(ty: &Type) -> bool {
