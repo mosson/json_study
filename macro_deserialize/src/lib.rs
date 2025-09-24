@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{Data, DeriveInput, Fields, Type, parse_macro_input};
+use syn::{Data, DeriveInput, Fields, PathArguments, Type, parse_macro_input};
 
 #[proc_macro_derive(Deserialize)]
 pub fn deserialize(input: TokenStream) -> TokenStream {
@@ -34,6 +34,16 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
                         }
                     });
                 }
+                _ if is_optional_string(&ty) => {
+                    fragments.push(quote! {
+                        #field_name: match map.get(#field_str) {
+                            Some(
+                                node::Node::String(s)
+                            ) => Some(s.clone()),
+                            _ => None,
+                        }
+                    });
+                }
                 _ => {}
             }
         }
@@ -58,4 +68,26 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
 
 fn is_string(ty: &Type) -> bool {
     matches!(ty, Type::Path(type_path) if type_path.path.is_ident("String"))
+}
+
+fn is_optional_string(ty: &Type) -> bool {
+    match option_inner_type(ty) {
+        Some(ty) => is_string(ty),
+        None => false,
+    }
+}
+
+fn option_inner_type(ty: &Type) -> Option<&Type> {
+    if let Type::Path(type_path) = ty {
+        if let Some(segment) = type_path.path.segments.first() {
+            if segment.ident == "Option" {
+                if let PathArguments::AngleBracketed(args) = &segment.arguments {
+                    if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
+                        return Some(inner_ty);
+                    }
+                }
+            }
+        }
+    }
+    None
 }
