@@ -13,6 +13,8 @@ pub enum Node {
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("")]
-    ConversionError,
+    #[error("{0}")]
+    RequiredError(String),
+    #[error("JSONの値の変換に失敗しました（{0}）")]
+    ConversionError(String),
 }
