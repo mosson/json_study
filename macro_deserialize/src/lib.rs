@@ -1,6 +1,9 @@
 use proc_macro::TokenStream;
-use quote::quote;
-use syn::{Data, DeriveInput, Fields, PathArguments, Type, parse_macro_input};
+use quote::{ToTokens, quote};
+use syn::{
+    Data, DeriveInput, Field, Fields, GenericArgument, PathArguments, Type, TypePath,
+    parse_macro_input,
+};
 
 #[proc_macro_derive(Deserialize)]
 pub fn deserialize(input: TokenStream) -> TokenStream {
@@ -15,444 +18,11 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
         }
     };
 
-    let mut fragments = vec![];
+    let mut ast = vec![];
 
     if let Fields::Named(named) = fields {
         for field in named.named {
-            let field_name = field.ident.unwrap();
-            let field_str = field_name.to_string();
-            let ty = field.ty;
-
-            match true {
-                _ if is_string(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(node::Node::String(s)) => s.clone(),
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_string) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(node::Node::String(s)) => Some(s.clone()),
-                            _ => None,
-                        }
-                    });
-                }
-                _ if is_i8(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(node::Node::Number(s)) => {
-                                let s: f64 = s.clone();
-                                match i8::try_from(s as i64) {
-                                    Ok(i) => i,
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_i8) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match i8::try_from(s as i64) {
-                                    Ok(i) => Some(i),
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => None,
-                        }
-                    });
-                }
-                _ if is_i16(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match i16::try_from(s as i64) {
-                                    Ok(i) => i,
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_i16) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match i16::try_from(s as i64) {
-                                    Ok(i) => Some(i),
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => None,
-                        }
-                    });
-                }
-                _ if is_i32(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match i32::try_from(s as i64) {
-                                    Ok(i) => i,
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_i32) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match i32::try_from(s as i64) {
-                                    Ok(i) => Some(i),
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => None,
-                        }
-                    });
-                }
-                _ if is_i64(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match i64::try_from(s as i64) {
-                                    Ok(i) => i,
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_i64) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match i64::try_from(s as i64) {
-                                    Ok(i) => Some(i),
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => None,
-                        }
-                    });
-                }
-                _ if is_isize(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match isize::try_from(s as isize) {
-                                    Ok(i) => i,
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_isize) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match isize::try_from(s as i64) {
-                                    Ok(i) => Some(i),
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => None,
-                        }
-                    });
-                }
-                _ if is_u8(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match u8::try_from(s as i64) {
-                                    Ok(i) => i,
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_u8) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match u8::try_from(s as i64) {
-                                    Ok(i) => Some(i),
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => None,
-                        }
-                    });
-                }
-                _ if is_u16(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match u16::try_from(s as i64) {
-                                    Ok(i) => i,
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_u16) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match u16::try_from(s as i64) {
-                                    Ok(i) => Some(i),
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => None,
-                        }
-                    });
-                }
-                _ if is_u32(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match u32::try_from(s as i64) {
-                                    Ok(i) => i,
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_u32) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match u32::try_from(s as i64) {
-                                    Ok(i) => Some(i),
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => None,
-                        }
-                    });
-                }
-                _ if is_u64(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match u64::try_from(s as i64) {
-                                    Ok(i) => i,
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_u64) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match u64::try_from(s as i64) {
-                                    Ok(i) => Some(i),
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => None,
-                        }
-                    });
-                }
-                _ if is_usize(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match usize::try_from(s as i64) {
-                                    Ok(i) => i,
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_usize) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match usize::try_from(s as i64) {
-                                    Ok(i) => Some(i),
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => None,
-                        }
-                    });
-                }
-                _ if is_f32(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match f32::try_from(s) {
-                                    Ok(i) => i,
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_f32) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => {
-                                let s: f64 = s.clone();
-                                match f32::try_from(s) {
-                                    Ok(i) => Some(i),
-                                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
-                                }
-                            },
-                            _ => None,
-                        }
-                    });
-                }
-                _ if is_f64(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => s.clone(),
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_f64) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(
-                                node::Node::Number(s)
-                            ) => Some(s.clone()),
-                            _ => None,
-                        }
-                    });
-                }
-                _ if is_bool(&ty) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(node::Node::True) => true,
-                            Some(node::Node::False) => false,
-                            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                        }
-                    });
-                }
-                _ if is_optional_type(&ty, is_bool) => {
-                    fragments.push(quote! {
-                        #field_name: match map.get(#field_str) {
-                            Some(node::Node::True) => Some(true),
-                            Some(node::Node::False) => Some(false),
-                            _ => None,
-                        }
-                    });
-                }
-                _ => {
-                    match option_inner_type(&ty) {
-                        Some(ty) => {
-                            fragments.push(quote! {
-                                #field_name: match map.get(#field_str) {
-                                    Some(node::Node::Null) => None,
-                                    // 完全修飾構文
-                                    Some(node) => Some(<#ty as node::FromNode>::from_node(node)?),
-                                    _ => None,
-                                }
-                            })
-                        },
-                        None => {
-                            fragments.push(quote! {
-                                #field_name: match map.get(#field_str) {
-                                    Some(node) => {
-                                        <#ty as node::FromNode>::from_node(&node)?
-                                    },
-                                    _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #field_str).to_string())),
-                                }
-                            })
-                        }
-                    }
-                }
-            }
+            ast.push(resolve_primitive_token(&field))
         }
     }
 
@@ -461,7 +31,7 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
             fn from_node(value: &node::Node) -> Result<Self, node::Error> {
                 if let node::Node::Object(map) = value {
                     Ok(Self {
-                        #(#fragments),*
+                        #(#ast),*
                     })
                 } else {
                     Err(node::Error::ConversionError("構造体へのJSONのマッピングはJSONオブジェクトのみサポートしています".into()))
@@ -473,67 +43,206 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
-fn is_string(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("String"))
-}
-fn is_i8(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("i8"))
-}
-fn is_i16(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("i16"))
-}
-fn is_i32(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("i32"))
-}
-fn is_i64(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("i64"))
-}
-fn is_isize(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("isize"))
-}
-fn is_u8(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("u8"))
-}
-fn is_u16(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("u16"))
-}
-fn is_u32(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("u32"))
-}
-fn is_u64(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("u64"))
-}
-fn is_usize(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("usize"))
-}
-fn is_f32(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("f32"))
-}
-fn is_f64(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("f64"))
-}
-fn is_bool(ty: &Type) -> bool {
-    matches!(ty, Type::Path(type_path) if type_path.path.is_ident("bool"))
-}
+fn resolve_primitive_token(field: &Field) -> proc_macro2::TokenStream {
+    let field_name = field.ident.as_ref().unwrap();
+    let field_str = field_name.to_string();
 
-fn is_optional_type(ty: &Type, f: fn(&Type) -> bool) -> bool {
-    match option_inner_type(ty) {
-        Some(ty) => f(ty),
-        None => false,
+    let exp = value_expression(
+        data_type(field).expect("文法がおかしい"),
+        field_str.as_str(),
+    );
+
+    quote! {
+        #field_name: match map.get(#field_str) {
+            #exp
+        }
     }
 }
 
-fn option_inner_type(ty: &Type) -> Option<&Type> {
-    if let Type::Path(type_path) = ty {
+fn value_expression(type_key: String, key: &str) -> proc_macro2::TokenStream {
+    let type_key = type_key.as_str();
+
+    match type_key {
+        "String" => string_expression::<true>(key),
+        "Option<String>" => string_expression::<false>(key),
+        "i8" | "i16" | "i32" | "i64" | "isize" | "u8" | "u16" | "u32" | "u64" | "usize" => {
+            let ty = &syn::parse_str(type_key).unwrap();
+
+            int_expression::<true>(key, ty)
+        }
+        "Option<i8>" | "Option<i16>" | "Option<i32>" | "Option<i64>" | "Option<isize>"
+        | "Option<u8>" | "Option<u16>" | "Option<u32>" | "Option<u64>" | "Option<usize>" => {
+            let ty = &syn::parse_str(type_key).unwrap();
+            let ty = inner_ty(ty);
+
+            int_expression::<false>(key, ty)
+        }
+        "f32" | "f64" => {
+            let ty = &syn::parse_str(type_key).unwrap();
+
+            float_expression::<true>(key, ty)
+        }
+        "Option<f32>" | "Option<f64>" => {
+            let ty = &syn::parse_str(type_key).unwrap();
+            let ty = inner_ty(ty);
+
+            float_expression::<false>(key, ty)
+        }
+        "bool" => bool_expression::<true>(key),
+        "Option<bool>" => bool_expression::<false>(key),
+        _ => {
+            let ty = &syn::parse_str(type_key).unwrap();
+            if option_type(ty) {
+                let ty = inner_ty(ty);
+                object_expression::<false>(key, ty)
+            } else {
+                object_expression::<true>(key, ty)
+            }
+        }
+    }
+}
+
+fn inner_ty(ty: &Type) -> &Type {
+    match ty {
+        Type::Path(TypePath { path, .. }) => {
+            let segment = path.segments.last().unwrap();
+
+            match &segment.arguments {
+                PathArguments::AngleBracketed(args) => match args.args.last().unwrap() {
+                    GenericArgument::Type(inner_ty) => inner_ty,
+                    _ => unreachable!(),
+                },
+                _ => unreachable!(),
+            }
+        }
+        _ => unreachable!(),
+    }
+}
+
+fn string_expression<const REQUIRED: bool>(key: &str) -> proc_macro2::TokenStream {
+    if REQUIRED {
+        quote! {
+            Some(node::Node::String(s)) => s.clone(),
+            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #key).to_string())),
+        }
+    } else {
+        quote! {
+            Some(node::Node::String(s)) => Some(s.clone()),
+            _ => None,
+        }
+    }
+}
+
+fn int_expression<const REQUIRED: bool>(key: &str, ty: &Type) -> proc_macro2::TokenStream {
+    if REQUIRED {
+        quote! {
+            Some(node::Node::Number(s)) => {
+                let s: f64 = s.clone();
+                match <#ty as TryFrom<i64>>::try_from(s as i64) {
+                    Ok(i) => i,
+                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
+                }
+            },
+            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #key).to_string())),
+        }
+    } else {
+        quote! {
+            Some(node::Node::Number(s)) => {
+                let s: f64 = s.clone();
+                match <#ty as TryFrom<i64>>::try_from(s as i64) {
+                    Ok(i) => Some(i),
+                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
+                }
+            },
+            _ => None,
+        }
+    }
+}
+
+fn float_expression<const REQUIRED: bool>(key: &str, ty: &Type) -> proc_macro2::TokenStream {
+    if REQUIRED {
+        quote! {
+            Some(node::Node::Number(s)) => {
+                let s: f64 = s.clone();
+                match <#ty as TryFrom<f64>>::try_from(s) {
+                    Ok(i) => i,
+                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
+                }
+            },
+            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #key).to_string())),
+        }
+    } else {
+        quote! {
+            Some(node::Node::Number(s)) => {
+                let s: f64 = s.clone();
+                match <#ty as TryFrom<f64>>::try_from(s) {
+                    Ok(i) => Some(i),
+                    Err(e) => return Err(node::Error::ConversionError(e.to_string())),
+                }
+            },
+            _ => None,
+        }
+    }
+}
+
+fn bool_expression<const REQUIRED: bool>(key: &str) -> proc_macro2::TokenStream {
+    if REQUIRED {
+        quote! {
+            Some(node::Node::True) => true,
+            Some(node::Node::False) => false,
+            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #key).to_string())),
+        }
+    } else {
+        quote! {
+            Some(node::Node::True) => Some(true),
+            Some(node::Node::False) => Some(false),
+            _ => None,
+        }
+    }
+}
+
+fn object_expression<const REQUIRED: bool>(key: &str, ty: &Type) -> proc_macro2::TokenStream {
+    if REQUIRED {
+        quote! {
+            Some(node) => <#ty as node::FromNode>::from_node(&node)?,
+            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #key).to_string())),
+        }
+    } else {
+        quote! {
+            Some(node::Node::Null) => None,
+            Some(node) => Some(<#ty as node::FromNode>::from_node(node)?),
+            _ => None,
+        }
+    }
+}
+
+fn data_type(field: &Field) -> Option<String> {
+    if let Type::Path(type_path) = &field.ty {
         if let Some(segment) = type_path.path.segments.first() {
             if segment.ident == "Option" {
                 if let PathArguments::AngleBracketed(args) = &segment.arguments {
                     if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
-                        return Some(inner_ty);
+                        return Some(format!(
+                            "Option<{}>",
+                            inner_ty.to_token_stream().to_string()
+                        ));
                     }
                 }
             }
         }
+
+        return type_path.path.get_ident().map(|ident| ident.to_string());
     }
+
     None
+}
+
+fn option_type(ty: &Type) -> bool {
+    if let Type::Path(type_path) = ty {
+        if let Some(segment) = type_path.path.segments.first() {
+            return segment.ident == "Option";
+        }
+    }
+
+    false
 }

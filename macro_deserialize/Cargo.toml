@@ -12,3 +12,4 @@ proc-macro = true
 quote = "1.0"
 syn = "2.0"
 node.workspace = true
+proc-macro2 = "1.0.101"

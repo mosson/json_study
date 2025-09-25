@@ -99,6 +99,7 @@ name = "macro_deserialize"
 version = "0.1.0"
 dependencies = [
  "node",
+ "proc-macro2",
  "quote",
  "syn",
 ]

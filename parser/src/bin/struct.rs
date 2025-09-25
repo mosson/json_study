@@ -6,6 +6,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[derive(Deserialize, Debug)]
     #[allow(dead_code)]
     struct Foo {
+        string: String,
         i8: i8,
         i16: i16,
         i32: i32,
@@ -18,28 +19,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         usize: usize,
         true_value: bool,
         false_value: bool,
-        string: String,
-    }
-
-    #[derive(Deserialize, Debug)]
-    #[allow(dead_code)]
-    struct Bar {
-        i8: Option<i8>,
-        i16: Option<i16>,
-        i32: Option<i32>,
-        i64: Option<i64>,
-        isize: Option<isize>,
-        u8: Option<u8>,
-        u16: Option<u16>,
-        u32: Option<u32>,
-        u64: Option<u64>,
-        usize: Option<usize>,
-        true_value: Option<bool>,
-        false_value: Option<bool>,
-        string: Option<String>,
     }
 
     let object = node::Node::Object(BTreeMap::from([
+        ("string".into(), node::Node::String("Hello, World!".into())),
         ("i8".into(), node::Node::Number(-10f64)),
         ("i16".into(), node::Node::Number(-20f64)),
         ("i32".into(), node::Node::Number(-30f64)),
@@ -52,12 +35,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("usize".into(), node::Node::Number(50f64)),
         ("true_value".into(), node::Node::True),
         ("false_value".into(), node::Node::False),
-        ("string".into(), node::Node::String("Hello, World!".into())),
     ]));
 
     let foo = Foo::from_node(&object)?;
 
     println!("{:#?}", foo);
+
+    #[derive(Deserialize, Debug)]
+    #[allow(dead_code)]
+    struct Bar {
+        string: Option<String>,
+        i8: Option<i8>,
+        i16: Option<i16>,
+        i32: Option<i32>,
+        i64: Option<i64>,
+        isize: Option<isize>,
+        u8: Option<u8>,
+        u16: Option<u16>,
+        u32: Option<u32>,
+        u64: Option<u64>,
+        usize: Option<usize>,
+        true_value: Option<bool>,
+        false_value: Option<bool>,
+    }
 
     let bar = Bar::from_node(&object)?;
 
@@ -68,6 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{:#?}", bar);
 
     let object = node::Node::Object(BTreeMap::from([
+        ("string".into(), node::Node::Null),
         ("i8".into(), node::Node::Null),
         ("i16".into(), node::Node::Null),
         ("i32".into(), node::Node::Null),
@@ -80,7 +81,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("usize".into(), node::Node::Null),
         ("true_value".into(), node::Node::Null),
         ("false_value".into(), node::Node::Null),
-        ("string".into(), node::Node::Null),
     ]));
 
     let bar = Bar::from_node(&object)?;
@@ -96,6 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     struct A {
         b: B,
         optional_b: Option<B>,
+        optional_b_2: Option<B>,
     }
 
     #[derive(Deserialize, Debug)]
@@ -113,7 +114,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("d".into(), node::Node::Null),
             ])),
         ),
-        ("optional_b".into(), node::Node::Null),
+        (
+            "optional_b".into(),
+            node::Node::Object(BTreeMap::from([
+                ("c".into(), node::Node::Number(12f64)),
+                ("d".into(), node::Node::Null),
+            ])),
+        ),
+        ("optional_b_2".into(), node::Node::Null),
     ]));
 
     let a = A::from_node(&object);
