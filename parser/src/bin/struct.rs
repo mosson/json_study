@@ -128,5 +128,71 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("{:#?}", a);
 
+    #[derive(Deserialize, Debug)]
+    #[allow(dead_code)]
+    struct Vector {
+        usize: Vec<usize>,
+        nested_string: Vec<Vec<String>>,
+        optional_f64: Vec<Option<f64>>,
+        deep_nested_i16: Vec<InnerVector>,
+    }
+
+    #[derive(Deserialize, Debug)]
+    #[allow(dead_code)]
+    struct InnerVector {
+        v: Vec<i16>,
+    }
+
+    let object = node::Node::Object(BTreeMap::from([
+        (
+            "usize".into(),
+            node::Node::Array(vec![
+                node::Node::Number(10f64),
+                node::Node::Number(11f64),
+                node::Node::Number(22f64),
+            ]),
+        ),
+        (
+            "nested_string".into(),
+            node::Node::Array(vec![
+                node::Node::Array(vec![
+                    node::Node::String("a".into()),
+                    node::Node::String("b".into()),
+                    node::Node::String("c".into()),
+                ]),
+                node::Node::Array(vec![
+                    node::Node::String("d".into()),
+                    node::Node::String("e".into()),
+                    node::Node::String("f".into()),
+                ]),
+            ]),
+        ),
+        (
+            "optional_f64".into(),
+            node::Node::Array(vec![
+                node::Node::Number(10f64),
+                node::Node::Null,
+                node::Node::Number(22f64),
+            ]),
+        ),
+        (
+            "deep_nested_i16".into(),
+            node::Node::Array(vec![
+                node::Node::Object(BTreeMap::from([(
+                    "v".into(),
+                    node::Node::Array(vec![node::Node::Number(-10f64), node::Node::Number(22f64)]),
+                )])),
+                node::Node::Object(BTreeMap::from([(
+                    "v".into(),
+                    node::Node::Array(vec![node::Node::Number(-66f64), node::Node::Number(77f64)]),
+                )])),
+            ]),
+        ),
+    ]));
+
+    let vector = Vector::from_node(&object);
+
+    println!("{:#?}", vector);
+
     Ok(())
 }

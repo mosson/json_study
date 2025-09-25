@@ -60,6 +60,7 @@ fn resolve_primitive_token(field: &Field) -> proc_macro2::TokenStream {
 }
 
 fn value_expression(type_key: String, key: &str) -> proc_macro2::TokenStream {
+    let type_key = type_key.replace(" ", "");
     let type_key = type_key.as_str();
 
     match type_key {
@@ -94,9 +95,9 @@ fn value_expression(type_key: String, key: &str) -> proc_macro2::TokenStream {
             let ty = &syn::parse_str(type_key).unwrap();
             if option_type(ty) {
                 let ty = inner_ty(ty);
-                object_expression::<false>(key, ty)
+                nest_expression::<false>(key, ty)
             } else {
-                object_expression::<true>(key, ty)
+                nest_expression::<true>(key, ty)
             }
         }
     }
@@ -201,6 +202,57 @@ fn bool_expression<const REQUIRED: bool>(key: &str) -> proc_macro2::TokenStream 
     }
 }
 
+fn nest_expression<const REQUIRED: bool>(key: &str, ty: &Type) -> proc_macro2::TokenStream {
+    match (REQUIRED, vector_type(ty)) {
+        (true, true) => vector_expression::<true>(key, ty),
+        (true, false) => object_expression::<true>(key, ty),
+        (false, true) => vector_expression::<false>(key, ty),
+        (false, false) => object_expression::<false>(key, ty),
+    }
+}
+
+fn vector_expression<const REQUIRED: bool>(key: &str, ty: &Type) -> proc_macro2::TokenStream {
+    let ty = inner_ty(ty);
+    let type_key = quote!(#ty).to_string();
+    let exp = value_expression(type_key.clone(), key);
+
+    if REQUIRED {
+        quote! {
+            Some(node::Node::Array(nodes)) => {
+                let mut values = vec![];
+
+                for node in nodes.into_iter() {
+                    values.push(
+                        match Some(node) {
+                            #exp
+                        }
+                    )
+                }
+
+                values
+            },
+            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #key).to_string())),
+        }
+    } else {
+        quote! {
+            Some(node::Node::Array(nodes)) => {
+                let mut values = vec![];
+
+                for node in nodes.into_iter() {
+                    values.push(
+                        match Some(node) {
+                            #exp
+                        }
+                    )
+                }
+
+                Some(values)
+            },
+            _ => None,
+        }
+    }
+}
+
 fn object_expression<const REQUIRED: bool>(key: &str, ty: &Type) -> proc_macro2::TokenStream {
     if REQUIRED {
         quote! {
@@ -228,6 +280,12 @@ fn data_type(field: &Field) -> Option<String> {
                         ));
                     }
                 }
+            } else if segment.ident == "Vec" {
+                if let PathArguments::AngleBracketed(args) = &segment.arguments {
+                    if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
+                        return Some(format!("Vec<{}>", inner_ty.to_token_stream().to_string()));
+                    }
+                }
             }
         }
 
@@ -244,5 +302,14 @@ fn option_type(ty: &Type) -> bool {
         }
     }
 
+    false
+}
+
+fn vector_type(ty: &Type) -> bool {
+    if let Type::Path(type_path) = ty {
+        if let Some(segment) = type_path.path.segments.first() {
+            return segment.ident == "Vec";
+        }
+    }
     false
 }
