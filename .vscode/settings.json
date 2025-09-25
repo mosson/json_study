@@ -3,6 +3,7 @@
     "btree",
     "codepoint",
     "Codepoint",
+    "elems",
     "rstest",
     "thiserror"
   ]

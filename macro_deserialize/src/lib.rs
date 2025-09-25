@@ -46,15 +46,61 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
 fn resolve_primitive_token(field: &Field) -> proc_macro2::TokenStream {
     let field_name = field.ident.as_ref().unwrap();
     let field_str = field_name.to_string();
+    let ty = &field.ty;
 
-    let exp = value_expression(
-        data_type(field).expect("文法がおかしい"),
-        field_str.as_str(),
-    );
+    let exp = if let Type::Tuple(tuple) = ty {
+        tuple_expression::<true>(tuple, field_str.as_str())
+    } else {
+        value_expression(
+            data_type(field).expect("文法がおかしい"),
+            field_str.as_str(),
+        )
+    };
 
     quote! {
         #field_name: match map.get(#field_str) {
             #exp
+        }
+    }
+}
+
+fn tuple_expression<const REQUIRED: bool>(
+    tuple: &syn::TypeTuple,
+    key: &str,
+) -> proc_macro2::TokenStream {
+    let mut exps = vec![];
+
+    for ty in tuple.elems.iter() {
+        let type_key = quote!(#ty).to_string();
+        let exp = value_expression(type_key, key);
+
+        exps.push(quote! {
+            {
+                let node = iter.next();
+                match node {
+                    #exp
+                }
+            }
+        });
+    }
+
+    if REQUIRED {
+        quote! {
+            Some(node::Node::Array(nodes)) => {
+                let mut iter = nodes.into_iter();
+
+                (#(#exps),*)
+            },
+            _ => return Err(node::Error::RequiredError(format!("JSONオブジェクトから `{}` が読み取れません", #key).to_string())),
+        }
+    } else {
+        quote! {
+            Some(node::Node::Array(nodes)) => {
+                let mut iter = nodes.into_iter();
+
+                Some((#(#exps),*))
+            },
+            _ => None,
         }
     }
 }
@@ -203,18 +249,22 @@ fn bool_expression<const REQUIRED: bool>(key: &str) -> proc_macro2::TokenStream 
 }
 
 fn nest_expression<const REQUIRED: bool>(key: &str, ty: &Type) -> proc_macro2::TokenStream {
-    match (REQUIRED, vector_type(ty)) {
-        (true, true) => vector_expression::<true>(key, ty),
-        (true, false) => object_expression::<true>(key, ty),
-        (false, true) => vector_expression::<false>(key, ty),
-        (false, false) => object_expression::<false>(key, ty),
+    if let Type::Tuple(tuple) = ty {
+        tuple_expression::<REQUIRED>(tuple, key)
+    } else {
+        match (REQUIRED, vector_type(ty)) {
+            (true, true) => vector_expression::<true>(key, ty),
+            (true, false) => object_expression::<true>(key, ty),
+            (false, true) => vector_expression::<false>(key, ty),
+            (false, false) => object_expression::<false>(key, ty),
+        }
     }
 }
 
 fn vector_expression<const REQUIRED: bool>(key: &str, ty: &Type) -> proc_macro2::TokenStream {
     let ty = inner_ty(ty);
     let type_key = quote!(#ty).to_string();
-    let exp = value_expression(type_key.clone(), key);
+    let exp = value_expression(type_key, key);
 
     if REQUIRED {
         quote! {

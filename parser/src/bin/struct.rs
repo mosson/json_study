@@ -194,5 +194,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("{:#?}", vector);
 
+    #[derive(Deserialize, Debug)]
+    #[allow(dead_code)]
+    struct DeriveTuple {
+        t: (usize, String, i16),
+        t2: (Option<usize>, String, Option<i16>),
+        t3: Option<(Option<usize>, String, Option<i16>)>,
+    }
+
+    let object = node::Node::Object(BTreeMap::from([
+        (
+            "t".into(),
+            node::Node::Array(vec![
+                node::Node::Number(4f64),
+                node::Node::String("Hello, World!".into()),
+                node::Node::Number(-8f64),
+            ]),
+        ),
+        (
+            "t2".into(),
+            node::Node::Array(vec![
+                node::Node::Number(4f64),
+                node::Node::String("Hello, World!".into()),
+                node::Node::Null,
+            ]),
+        ),
+        ("t3".into(), node::Node::Null),
+    ]));
+
+    let derive_tuple = DeriveTuple::from_node(&object);
+
+    println!("{:#?}", derive_tuple);
+
     Ok(())
 }
