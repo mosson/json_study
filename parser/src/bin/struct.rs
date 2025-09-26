@@ -1,5 +1,6 @@
 use macro_deserialize::Deserialize;
 use node::FromNode;
+use parser::Parser;
 use std::collections::BTreeMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -17,6 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         u32: u32,
         u64: u64,
         usize: usize,
+        f64: f64,
         true_value: bool,
         false_value: bool,
     }
@@ -33,6 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("u32".into(), node::Node::Number(30f64)),
         ("u64".into(), node::Node::Number(40f64)),
         ("usize".into(), node::Node::Number(50f64)),
+        ("f64".into(), node::Node::Number(60.123f64)),
         ("true_value".into(), node::Node::True),
         ("false_value".into(), node::Node::False),
     ]));
@@ -55,6 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         u32: Option<u32>,
         u64: Option<u64>,
         usize: Option<usize>,
+        f64: Option<f64>,
         true_value: Option<bool>,
         false_value: Option<bool>,
     }
@@ -79,6 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("u32".into(), node::Node::Null),
         ("u64".into(), node::Node::Null),
         ("usize".into(), node::Node::Null),
+        ("f64".into(), node::Node::Null),
         ("true_value".into(), node::Node::Null),
         ("false_value".into(), node::Node::Null),
     ]));
@@ -225,6 +230,73 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let derive_tuple = DeriveTuple::from_node(&object);
 
     println!("{:#?}", derive_tuple);
+
+    #[derive(Deserialize, Debug)]
+    #[allow(dead_code)]
+    struct Full {
+        string: String,
+        number_integer: usize,
+        number_negative: isize,
+        number_float: f64,
+        number_exponent: f64,
+        boolean_true: bool,
+        boolean_false: bool,
+        null_value: Option<usize>,
+        array: (String, usize, bool, Option<usize>, FullNested),
+        object: FullNested2,
+    }
+
+    #[derive(Deserialize, Debug)]
+    #[allow(dead_code)]
+    struct FullNested {
+        nested_key: String,
+    }
+
+    #[derive(Deserialize, Debug)]
+    #[allow(dead_code)]
+    struct FullNested2 {
+        key1: String,
+        key2: usize,
+        key3: bool,
+    }
+
+    let input = r#"
+        {
+            "string": "Hello, 世界",
+            "number_integer": 42,
+            "number_negative": -123,
+            "number_float": 3.14159,
+            "number_exponent": 1.23e4,
+            "boolean_true": true,
+            "boolean_false": false,
+            "null_value": null,
+            "array": [
+                "text",
+                123,
+                false,
+                null,
+                {
+                "nested_key": "nested_value"
+                }
+            ],
+            "object": {
+                "key1": "value1",
+                "key2": 2,
+                "key3": true
+            }
+        }
+    "#;
+
+    let cursor = std::io::Cursor::new(input);
+    let buf_reader = std::io::BufReader::new(cursor);
+    let mut parser = Parser::new(buf_reader);
+
+    let node = parser.parse();
+    assert!(node.is_ok());
+
+    let parsed = Full::from_node(&node.unwrap());
+
+    println!("{:#?}", parsed);
 
     Ok(())
 }
