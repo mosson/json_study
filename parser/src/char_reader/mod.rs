@@ -168,12 +168,14 @@ where
         char::from_u32(codepoint)
             .ok_or_else(|| Error::InvalidCodepoint(codepoint, self.line, self.position))
             .map(|c| {
+                let r = (c, self.line, self.position);
+
                 if c == '\n' {
                     self.line += 1;
-                    self.position = 1;
+                    self.position = 0;
                 }
 
-                (c, self.line, self.position)
+                r
             })
     }
 
@@ -225,17 +227,20 @@ mod tests {
         let mut char_reader = CharReader::new(handle);
         let mut current_pos = 0;
         let mut current_line = 1;
+        let mut prev_return = false;
 
         for want in source.chars().take(8) {
             let got = char_reader.peek();
             assert!(got.is_ok());
             let (char, line, pos) = got.unwrap();
-            if want == '\n' {
+
+            if prev_return {
                 current_pos = 1;
                 current_line += 1;
             } else {
                 current_pos += 1;
             }
+            prev_return = want == '\n';
             assert_eq!(want, *char);
             assert_eq!(current_line, *line);
             assert_eq!(current_pos, *pos);
@@ -246,17 +251,19 @@ mod tests {
         }
         current_pos = 0;
         current_line = 1;
+        let mut prev_return = false;
 
         for want in source.chars().take(10) {
             let got = char_reader.peek();
             assert!(got.is_ok());
             let (char, line, pos) = got.unwrap();
-            if want == '\n' {
+            if prev_return {
                 current_pos = 1;
                 current_line += 1;
             } else {
                 current_pos += 1;
             }
+            prev_return = want == '\n';
             assert_eq!(want, *char);
             assert_eq!(current_line, *line);
             assert_eq!(current_pos, *pos);
@@ -264,17 +271,19 @@ mod tests {
 
         current_pos = 0;
         current_line = 1;
+        let mut prev_return = false;
 
         for want in source.chars() {
             let got = char_reader.read();
             assert!(got.is_ok());
             let (char, line, pos) = got.unwrap();
-            if want == '\n' {
+            if prev_return {
                 current_pos = 1;
                 current_line += 1;
             } else {
                 current_pos += 1;
             }
+            prev_return = want == '\n';
             assert_eq!(want, char);
             assert_eq!(current_line, line);
             assert_eq!(current_pos, pos);
